@@ -4,6 +4,10 @@
 #include <stddef.h>
 #include <dirent.h>
 
+#define PT_DIR  (1 << 0)
+#define PT_FIL  (1 << 1)
+#define PT_DEN  (1 << 2)
+
 
 struct filesize
 {
@@ -25,16 +29,23 @@ struct directory
 struct file
 {
     char *bytes;
+    int count;
+};
+
+struct denied
+{
+    char msg[64];
 };
 
 
 struct preview
 {
-    bool is_dir;
+    char type;
     char *path;
     union {
         struct directory directory;
         struct file file;
+        struct denied denied;
     };
 };
 
@@ -48,6 +59,9 @@ struct filesize file_size(const char *path);
 bool is_dir(const struct dirent *entry);
 
 bool is_root(const char *path);
+
+bool has_permissions(const char *path,
+                     int mode);
 
 
 void init_path(char *current_dir,

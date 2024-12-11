@@ -5,11 +5,13 @@
 #include <sys/ioctl.h>
 #include "../path.h"
 #include "../screen.h"
+#include "../ext.h"
 
 #define SIZE_LEN    8
 
 #define ICON_FOLDER "📁"
 #define ICON_FILE   "📄"
+#define ICON_DENY   "🔒"
 
 
 void new_screen(void)
@@ -113,29 +115,30 @@ void reset_formatting(void)
 
 
 static void print_centred(const char *text,
-                          const int width)
+                          const int left,
+                          const int right)
 {
     const size_t len = strlen(text);
+    const int width = right - left;
     const int pad = (int)(width - len) / 2;
 
-    printf("%*s%s%*s",
-           pad,
-           "",
-           text,
-           pad,
-           "");
+    printf("\033[%dG%s",
+           left + pad,
+           text);
 }
 
 
-static void print_dir_title(const char *text,
-                            const int width)
+static void print_title(const char *text,
+                        const int left,
+                        const int right)
 {
     enable_bold();
 
-    printf("\033[1;1H");
+    printf("\033[1H");
 
     print_centred(text,
-                  width);
+                  left,
+                  right);
 
     reset_formatting();
 }
@@ -195,11 +198,87 @@ static void print_file_info(const char *dir,
     }
 }
 
+static void print_no_permissions(const int left,
+                                 const int index)
+{
+    printf("\033[%d;%dH%s",
+           index,
+           left,
+           ICON_DENY);
+}
+
 static void print_directory_info(const struct dirent *entry)
 {
     printf("%s %s",
            ICON_FOLDER,
            entry->d_name);
+}
+
+static void print_file_contents(const struct preview *pre,
+                                const int left,
+                                const int right,
+                                const int height)
+{
+    char *ext = strrchr(pre->path,
+                        '.');
+
+    if (!ext)
+    {
+        ext = pre->path;
+    }
+    else
+    {
+        ext++;
+    }
+
+    if (valid_filetype(ext,
+                       strlen(ext)))
+    {
+        const int width = right - left;
+        void *bytes = pre->file.bytes;
+        size_t remain = pre->file.count;
+
+        for (int i = 3; i < height; i++)
+        {
+            if (remain > pre->file.count)
+            {
+                break;
+            }
+
+            printf("\033[%d;%dH",
+                   i,
+                   left);
+
+            const size_t seek = (width < remain) ? width :
+                                                   remain;
+
+            void *new_line = memchr(bytes,
+                                    '\n',
+                                    seek);
+
+            size_t write = width;
+
+            if (new_line &&
+                new_line - bytes < width)
+            {
+                write = new_line - bytes + 1;
+            }
+
+            write = fwrite(bytes,
+                           sizeof(char),
+                           write,
+                           stdout);
+
+            remain -= write;
+            bytes += write;
+        }
+    }
+    else
+    {
+        printf("Cannot display that file");
+    }
+
+    fflush(stdout);
 }
 
 
@@ -211,8 +290,9 @@ void print_directory(const struct directory *dir,
 {
     if (!is_preview)
     {
-        print_dir_title(dir->title,
-                    right - left);
+        print_title(dir->title,
+                    left,
+                    right);
     }
 
     const int screen = height - 2;
@@ -221,6 +301,13 @@ void print_directory(const struct directory *dir,
 
     for (int i = dir->offset, j = 3; i < halt; i++, j++)
     {
+        char full_path[PATH_MAX] = { 0 };
+
+        struct dirent *entry = dir->list[i];
+
+        strcpy(full_path,
+               dir->path);
+
         printf("\033[%d;%dH",
                j,
                left);
@@ -230,18 +317,26 @@ void print_directory(const struct directory *dir,
             enable_bold();
         }
 
-        if (is_dir(dir->list[i]))
+        if (is_dir(entry))
         {
-            print_directory_info(dir->list[i]);
+            print_directory_info(entry);
         }
         else
         {
             print_file_info(dir->path,
-                            dir->list[i],
+                            entry,
                             left,
                             right,
                             j,
                             is_preview);
+        }
+
+        if (!has_permissions(path(full_path,
+                                 entry->d_name),
+                             R_OK))
+        {
+            print_no_permissions(left,
+                                 j);
         }
 
         if (i == dir->cursor)
@@ -258,12 +353,26 @@ void print_preview(const struct preview *pre,
                    int right,
                    int height)
 {
-    if (pre->is_dir)
+    char *title = strrchr(pre->path,
+                          '/') + 1;
+
+    print_title(title,
+                left,
+                right);
+
+    if (pre->type & PT_DIR)
     {
         print_directory(&pre->directory,
-                        left+1,
+                        left + 1,
                         right,
                         height,
                         true);
+    }
+    else if (pre->type & PT_FIL)
+    {
+        print_file_contents(pre,
+                            left + 1,
+                            right,
+                            height);
     }
 }

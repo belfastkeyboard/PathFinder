@@ -13,25 +13,32 @@ void get_input(char *key)
 {
     memset(key, 0, KEY_LEN);
 
-    static int i = 0;
-    const char *table[] =
-    {
-        [0] = KEY_LEFT,
-        [1] = KEY_LEFT,
-        [2] = KEY_LEFT,
-        [3] = KEY_LEFT,
-        [4] = KEY_LEFT,
-        [5] = KEY_RIGHT
-    };
+//    static int i = 0;
+//    const char *table[] =
+//    {
+//        [0] = KEY_LEFT,
+//        [1] = KEY_LEFT,
+//        [2] = KEY_LEFT,
+//        [3] = KEY_LEFT,
+//        [4] = KEY_LEFT,
+//        [5] = KEY_RIGHT
+//    };
+//
+//    if (i < 3)
+//    {
+//        const char *go = table[i++];
+//        strcpy(key,
+//               go);
+//    }
+//    else
+//    {
+//        strcpy(key,
+//               KEY_DOWN);
+//    }
 
-    const char *go = table[i++];
-
-    strcpy(key,
-           go);
-
-//    read(STDIN_FILENO,
-//         key,
-//         KEY_LEN);
+    read(STDIN_FILENO,
+         key,
+         KEY_LEN);
 }
 
 
@@ -106,7 +113,8 @@ void move_dir(const char *key,
         struct dirent *curr = dir->list[dir->cursor];
 
         if (strcmp(key,
-                   KEY_RIGHT) == 0 && is_dir(curr))
+                   KEY_RIGHT) == 0 &&
+                   is_dir(curr))
         {
             step_in(curr->d_name,
                     dir,

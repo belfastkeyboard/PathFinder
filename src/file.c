@@ -2,6 +2,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include "../file.h"
 #include "../path.h"
 
@@ -98,6 +99,21 @@ static void load_directory(struct directory* dir)
     }
 }
 
+static void get_parent(char *path)
+{
+    char *sep = strrchr(path,
+                        '/');
+
+    if (sep != path)
+    {
+        sep[0] = '\0';
+    }
+    else
+    {
+        sep[1] = '\0';
+    }
+}
+
 
 struct filesize file_size(const char *path)
 {
@@ -127,6 +143,13 @@ bool is_root(const char *path)
     return strcmp(path, "/") == 0;
 }
 
+bool has_permissions(const char *path,
+                     const int mode)
+{
+    return !access(path,
+                   mode);
+}
+
 
 void init_path(char *current_dir,
                const char *path,
@@ -137,6 +160,8 @@ void init_path(char *current_dir,
             realpath(path,
                     current_dir),
             PATH_MAX);
+
+    pre->type = PT_DEN;
 
     dir->path = current_dir;
 
@@ -157,9 +182,13 @@ void load_preview(struct directory *dir,
     path(preview_path,
          entry->d_name);
 
-    if (pre->is_dir)
+    if (pre->type & PT_DIR)
     {
         free(pre->directory.list);
+    }
+    else if (pre->type & PT_FIL)
+    {
+        free(pre->file.bytes);
     }
 
     memset(pre,
@@ -168,30 +197,42 @@ void load_preview(struct directory *dir,
 
     pre->path = preview_path;
 
-    if (is_dir(entry))
+    if (has_permissions(pre->path,
+                        R_OK))
     {
-        pre->directory.path = pre->path;
+        if (is_dir(entry))
+        {
+            pre->directory.path = pre->path;
 
-        load_directory(&pre->directory);
-        pre->is_dir = true;
+            load_directory(&pre->directory);
+            pre->type = PT_DIR;
+        }
+        else
+        {
+            struct filesize fs = file_size(pre->path);
+
+            pre->file.count = (int)fs.bytes;
+            pre->file.bytes = malloc(fs.bytes);
+
+            FILE *file = fopen(pre->path,
+                               "r");
+
+            fread(pre->file.bytes,
+                  sizeof(char),
+                  fs.bytes,
+                  file);
+
+            pre->type = PT_FIL;
+
+            fclose(file);
+        }
     }
     else
     {
-        struct filesize fs = file_size(pre->path);
+        pre->type = PT_DEN;
 
-        pre->file.bytes = malloc(fs.bytes);
-
-        FILE *file = fopen(pre->path,
-                           "r");
-
-        fread(pre->file.bytes,
-              sizeof(char),
-              fs.bytes,
-              file);
-
-        pre->is_dir = false;
-
-        fclose(file);
+        strcpy(pre->denied.msg,
+               "You do not have permission to preview this content.");
     }
 }
 
@@ -203,29 +244,39 @@ void step_in(const char *new_name,
     dir->path = path(dir->path,
                      new_name);
 
-    load_directory(dir);
+    if (has_permissions(dir->path,
+                        R_OK))
+    {
+        load_directory(dir);
 
-    load_preview(dir,
-                 pre);
+        load_preview(dir,
+                     pre);
+    }
+    else
+    {
+        // TODO: display error message
+
+        get_parent(dir->path);
+    }
 }
 
 void step_out(struct directory *dir,
               struct preview *pre)
 {
-    char *sep = strrchr(dir->path,
-                        '/');
+    get_parent(dir->path);
 
-    if (sep != dir->path)
+    if (has_permissions(dir->path,
+                        R_OK))
     {
-        sep[0] = '\0';
+        load_directory(dir);
+
+        load_preview(dir,
+                     pre);
     }
     else
     {
-        sep[1] = '\0';
+        const size_t len = strlen(dir->path);
+
+        dir->path[len] = '/';
     }
-
-    load_directory(dir);
-
-    load_preview(dir,
-                 pre);
 }

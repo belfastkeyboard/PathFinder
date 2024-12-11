@@ -4,11 +4,14 @@
 
 
 // TODO:
-//  handle permissions errors (access() ?)
-//  prevent reloading whole page on scrolling cursor
-
+//  settings (just put it on a bitmask)
+//  'h': hide hidden files (filter out entry->d_name[0] == '.')
+//  'p': do not display preview
+//  's': cycle through sorting options
+//  display error message in red text on the bottom line
 
 #include <stdio.h>
+
 
 int main(int argc, char *argv[])
 {
