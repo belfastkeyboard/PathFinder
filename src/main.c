@@ -4,7 +4,6 @@
 
 
 // TODO:
-//  fix valgrind errors
 //  scrolling file previews
 //  display error message in red text on the bottom line
 
@@ -81,8 +80,9 @@ int main(int argc, char *argv[])
                  settings);
     }
 
+    unload_directory(&directory);
+    unload_preview(&preview);
     disable_raw_mode();
-
     close_screen();
 
     return 0;

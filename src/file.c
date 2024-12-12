@@ -118,10 +118,7 @@ static struct filesize get_size_as_string(const long sz)
 void load_directory(struct directory* dir,
                     const settings settings)
 {
-    if (dir->list)
-    {
-        free(dir->list);
-    }
+    unload_directory(dir);
 
     int (*filter)(const struct dirent *) = (settings & SETTINGS_HIDE) ? hide_hidden :
                                                                         no_special;
@@ -216,7 +213,7 @@ void init_path(char *current_dir,
     realpath(path,
              current_dir);
 
-    pre->type = PT_DEN;
+    pre->type = PT_NUL;
 
     dir->path = current_dir;
 
@@ -238,18 +235,7 @@ void load_preview(struct directory *dir,
     path(preview_path,
          entry->d_name);
 
-    if (pre->type & PT_DIR)
-    {
-        free(pre->directory.list);
-    }
-    else if (pre->type & PT_FIL)
-    {
-        free(pre->file.bytes);
-    }
-
-    memset(pre,
-           0,
-           sizeof(struct preview));
+    unload_preview(pre);
 
     pre->path = preview_path;
 
@@ -299,17 +285,17 @@ void load_preview(struct directory *dir,
             if (!is_permitted)
             {
                 pre->type = PT_DEN;
-                message = "You do not have permission to preview this content.";
+                message = "ⓘ You do not have permission to preview this content.";
             }
             else if (!count)
             {
                 pre->type = PT_EMP;
-                message = "This file is empty.";
+                message = "ⓘ This file is empty.";
             }
             else
             {
                 pre->type = PT_INV;
-                message = "This filetype cannot be previewed.";
+                message = "ⓘ This filetype cannot be previewed.";
             }
 
             pre->file.count = strlen(message);
@@ -320,6 +306,36 @@ void load_preview(struct directory *dir,
                    pre->file.count + 1);
         }
     }
+}
+
+void unload_directory(struct directory *dir)
+{
+    if (dir->list)
+    {
+        for (int i = 0; i < dir->nmemb; i++)
+        {
+            free(dir->list[i]);
+        }
+
+        free(dir->list);
+        dir->list = NULL;
+    }
+}
+
+void unload_preview(struct preview *pre)
+{
+    if (pre->type & PT_DIR)
+    {
+        unload_directory(&pre->directory);
+    }
+    else if (pre->type != PT_NUL)
+    {
+        free(pre->file.bytes);
+    }
+
+    memset(pre,
+           0,
+           sizeof(struct preview));
 }
 
 

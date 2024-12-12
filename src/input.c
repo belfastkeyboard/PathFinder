@@ -24,12 +24,12 @@ void get_input(char *key)
 //        KEY_DOWN
 //    };
 //
-//    static size_t i = 0;
+    static size_t i = 0;
 //
 //    const char *select = table[i++];
 //
-//    strcpy(key,
-//           select);
+//        strcpy(key,
+//               "q");
 
     read(STDIN_FILENO,
          key,

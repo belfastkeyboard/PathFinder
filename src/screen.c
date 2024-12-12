@@ -128,8 +128,6 @@ void print_vertical_line(const int x,
 }
 
 
-
-
 static void print_centred(const char *text,
                           const int left,
                           const int right)

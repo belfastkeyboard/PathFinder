@@ -6,11 +6,12 @@
 #include "types.h"
 
 
-#define PT_DIR  (1 << 0)
-#define PT_FIL  (1 << 1)
-#define PT_DEN  (1 << 2)
-#define PT_EMP  (1 << 3)
-#define PT_INV  (1 << 4)
+#define PT_NUL  (1 << 0)
+#define PT_DIR  (1 << 1)
+#define PT_FIL  (1 << 2)
+#define PT_DEN  (1 << 3)
+#define PT_EMP  (1 << 4)
+#define PT_INV  (1 << 5)
 
 
 struct filesize
@@ -75,6 +76,10 @@ void load_directory(struct directory* dir,
 void load_preview(struct directory *dir,
                   struct preview *pre,
                   settings settings);
+
+void unload_directory(struct directory *dir);
+
+void unload_preview(struct preview *pre);
 
 
 void step_in(const char *new_name,
