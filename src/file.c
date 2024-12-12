@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <malloc.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -5,11 +6,53 @@
 #include <unistd.h>
 #include "../file.h"
 #include "../path.h"
+#include "../settings.h"
+
 
 #define  B (1)
 #define KB (B * 1024)
 #define MB (KB * 1024)
 #define GB (MB * 1024)
+
+typedef int (*SortFunc)(const struct dirent **, const struct dirent **);
+
+
+static int sort_alphabetical(const struct dirent **entry1,
+                             const struct dirent **entry2)
+{
+    const char *a = (*entry1)->d_name;
+    const char *b = (*entry2)->d_name;
+
+    while (*a == *b)
+    {
+        a++;
+        b++;
+    }
+
+    const int x = tolower(*a);
+    const int y = tolower(*b);
+
+    return ((x > y) - (x < y));
+}
+
+static int sort_type(const struct dirent **entry1,
+                     const struct dirent **entry2)
+{
+    const unsigned char x = (*entry1)->d_type;
+    const unsigned char y = (*entry2)->d_type;
+
+    return ((x > y) - (x < y));
+}
+
+
+static SortFunc sort_table[] =
+{
+    sort_alphabetical,
+    sort_type
+};
+
+int sort_index = 0;
+const int sort_table_max = sizeof(sort_table) / sizeof(SortFunc);
 
 
 int no_special(const struct dirent *entry)
@@ -18,6 +61,11 @@ int no_special(const struct dirent *entry)
                  strcmp(entry->d_name, "..") == 0;
 
     return !result;
+}
+
+int hide_hidden(const struct dirent *entry)
+{
+    return entry->d_name[0] != '.';
 }
 
 
@@ -66,17 +114,24 @@ static struct filesize get_size_as_string(const long sz)
 }
 
 
-static void load_directory(struct directory* dir)
+void load_directory(struct directory* dir,
+                    const settings settings)
 {
     if (dir->list)
     {
         free(dir->list);
     }
 
+    int (*filter)(const struct dirent *) = (settings & SETTINGS_HIDE) ? hide_hidden :
+                                                                        no_special;
+
+    int (*compare)(const struct dirent **,
+                   const struct dirent **) = sort_table[sort_index];
+
     dir->nmemb = scandir(dir->path,
                          &dir->list,
-                         no_special,
-                         alphasort);
+                         filter,
+                         compare);
 
     dir->cursor = 0;
     dir->offset = 0;
@@ -154,7 +209,8 @@ bool has_permissions(const char *path,
 void init_path(char *current_dir,
                const char *path,
                struct directory *dir,
-               struct preview *pre)
+               struct preview *pre,
+               const settings settings)
 {
     strncpy(current_dir,
             realpath(path,
@@ -166,11 +222,13 @@ void init_path(char *current_dir,
     dir->path = current_dir;
 
     step_out(dir,
-             pre);
+             pre,
+             settings);
 }
 
 void load_preview(struct directory *dir,
-                  struct preview *pre)
+                  struct preview *pre,
+                  const settings settings)
 {
     static char preview_path[PATH_MAX] = { 0 };
 
@@ -204,7 +262,9 @@ void load_preview(struct directory *dir,
         {
             pre->directory.path = pre->path;
 
-            load_directory(&pre->directory);
+            load_directory(&pre->directory,
+                           settings);
+
             pre->type = PT_DIR;
         }
         else
@@ -239,7 +299,8 @@ void load_preview(struct directory *dir,
 
 void step_in(const char *new_name,
              struct directory *dir,
-             struct preview *pre)
+             struct preview *pre,
+             const settings settings)
 {
     dir->path = path(dir->path,
                      new_name);
@@ -247,10 +308,12 @@ void step_in(const char *new_name,
     if (has_permissions(dir->path,
                         R_OK))
     {
-        load_directory(dir);
+        load_directory(dir,
+                       settings);
 
         load_preview(dir,
-                     pre);
+                     pre,
+                     settings);
     }
     else
     {
@@ -261,17 +324,20 @@ void step_in(const char *new_name,
 }
 
 void step_out(struct directory *dir,
-              struct preview *pre)
+              struct preview *pre,
+              const settings settings)
 {
     get_parent(dir->path);
 
     if (has_permissions(dir->path,
                         R_OK))
     {
-        load_directory(dir);
+        load_directory(dir,
+                       settings);
 
         load_preview(dir,
-                     pre);
+                     pre,
+                     settings);
     }
     else
     {

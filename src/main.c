@@ -1,35 +1,31 @@
 #include "../file.h"
 #include "../input.h"
 #include "../screen.h"
+#include "../settings.h"
 
 
 // TODO:
-//  settings (just put it on a bitmask)
-//  'h': hide hidden files (filter out entry->d_name[0] == '.')
-//  'p': do not display preview
-//  's': cycle through sorting options
+//  file previews have weird buggy trail at the end
+//  cannot display file message is bugged
+//  scrolling file previews
 //  display error message in red text on the bottom line
-
-#include <stdio.h>
 
 
 int main(int argc, char *argv[])
 {
-    FILE *file = fopen("log.txt", "w");
-    fclose(file);
-
     enable_raw_mode();
 
     char current_path[PATH_MAX] = { 0 };
-
     struct directory directory = { 0 };
     struct preview preview = { 0 };
-    char key[KEY_LEN] = { 0 };
+    key key = { 0 };
+    settings settings = SETTINGS_PREV;
 
     init_path(current_path,
               argv[0],
               &directory,
-              &preview);
+              &preview,
+              settings);
 
     while (true)
     {
@@ -40,19 +36,26 @@ int main(int argc, char *argv[])
 
         new_screen();
 
+        const int dir_r = (settings & SETTINGS_PREV) ? pre_div :
+                                                       w;
+
         print_directory(&directory,
                         0,
-                        pre_div,
+                        dir_r,
                         h,
                         false);
 
-        print_vertical_line(pre_div,
-                            h);
 
-        print_preview(&preview,
-                      pre_div,
-                      w,
-                      h);
+        if (settings & SETTINGS_PREV)
+        {
+            print_vertical_line(pre_div,
+                                h);
+
+            print_preview(&preview,
+                          pre_div,
+                          w,
+                          h);
+        }
 
         get_input(key);
 
@@ -60,15 +63,27 @@ int main(int argc, char *argv[])
         {
             break;
         }
+        else if (change_settings(&settings,
+                                 key))
+        {
+            load_directory(&directory,
+                           settings);
+
+            load_preview(&directory,
+                         &preview,
+                         settings);
+        }
 
         move_cursor(key,
                     &directory,
                     &preview,
+                    settings,
                     h);
 
         move_dir(key,
                  &directory,
-                 &preview);
+                 &preview,
+                 settings);
     }
 
     disable_raw_mode();

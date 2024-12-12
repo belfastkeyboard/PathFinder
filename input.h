@@ -2,21 +2,26 @@
 
 #include <stdbool.h>
 #include "file.h"
+#include "types.h"
+#include "settings.h"
+
 
 #define KEY_LEN 5
 
 
-void get_input(char *key);
+void get_input(key key);
 
 
-bool should_exit(const char *key);
+bool should_exit(const key key);
 
 
-void move_cursor(const char *key,
+void move_cursor(const key key,
                  struct directory *dir,
                  struct preview *pre,
+                 settings settings,
                  int height);
 
-void move_dir(const char *key,
+void move_dir(const key key,
               struct directory *dir,
-              struct preview *pre);
+              struct preview *pre,
+              settings settings);

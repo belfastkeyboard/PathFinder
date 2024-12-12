@@ -33,7 +33,7 @@ void get_input(char *key)
 //    else
 //    {
 //        strcpy(key,
-//               KEY_DOWN);
+//               "s");
 //    }
 
     read(STDIN_FILENO,
@@ -42,15 +42,16 @@ void get_input(char *key)
 }
 
 
-bool should_exit(const char *key)
+bool should_exit(const key key)
 {
     return key[0] == KEY_Q_LOW;
 }
 
 
-void move_cursor(const char *key,
+void move_cursor(const key key,
                  struct directory *dir,
                  struct preview *pre,
+                 const settings settings,
                  int height)
 {
     const int screen = height - 3;
@@ -100,13 +101,15 @@ void move_cursor(const char *key,
     if (old != dir->cursor)
     {
         load_preview(dir,
-                     pre);
+                     pre,
+                     settings);
     }
 }
 
-void move_dir(const char *key,
+void move_dir(const key key,
               struct directory *dir,
-              struct preview *pre)
+              struct preview *pre,
+              const settings settings)
 {
     if (dir->nmemb > 0)
     {
@@ -118,13 +121,15 @@ void move_dir(const char *key,
         {
             step_in(curr->d_name,
                     dir,
-                    pre);
+                    pre,
+                    settings);
         }
         else if (strcmp(key,
                         KEY_LEFT) == 0)
         {
             step_out(dir,
-                     pre);
+                     pre,
+                     settings);
         }
     }
 }

@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <dirent.h>
+#include "types.h"
+
 
 #define PT_DIR  (1 << 0)
 #define PT_FIL  (1 << 1)
@@ -67,15 +69,23 @@ bool has_permissions(const char *path,
 void init_path(char *current_dir,
                const char *path,
                struct directory *dir,
-               struct preview *pre);
+               struct preview *pre,
+               settings settings);
+
+
+void load_directory(struct directory* dir,
+                    settings settings);
 
 void load_preview(struct directory *dir,
-                  struct preview *pre);
+                  struct preview *pre,
+                  settings settings);
 
 
 void step_in(const char *new_name,
              struct directory *dir,
-             struct preview *pre);
+             struct preview *pre,
+             settings settings);
 
 void step_out(struct directory *dir,
-              struct preview *pre);
+              struct preview *pre,
+              settings settings);
