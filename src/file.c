@@ -212,10 +212,8 @@ void init_path(char *current_dir,
                struct preview *pre,
                const settings settings)
 {
-    strncpy(current_dir,
-            realpath(path,
-                    current_dir),
-            PATH_MAX);
+    realpath(path,
+             current_dir);
 
     pre->type = PT_DEN;
 
@@ -231,7 +229,6 @@ void load_preview(struct directory *dir,
                   const settings settings)
 {
     static char preview_path[PATH_MAX] = { 0 };
-
     struct dirent *entry = dir->list[dir->cursor];
 
     strcpy(preview_path,

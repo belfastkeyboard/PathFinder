@@ -1,12 +1,12 @@
 #include "../file.h"
 #include "../input.h"
 #include "../screen.h"
-#include "../settings.h"
 
 
 // TODO:
-//  file previews have weird buggy trail at the end
+//  it's not printing preveiw files for some reason!
 //  cannot display file message is bugged
+//  long preview titles can overflow the display
 //  scrolling file previews
 //  display error message in red text on the bottom line
 
@@ -45,14 +45,13 @@ int main(int argc, char *argv[])
                         h,
                         false);
 
-
         if (settings & SETTINGS_PREV)
         {
             print_vertical_line(pre_div,
                                 h);
 
             print_preview(&preview,
-                          pre_div,
+                          pre_div + 1,
                           w,
                           h);
         }

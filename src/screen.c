@@ -144,23 +144,17 @@ static void print_title(const char *text,
 }
 
 
-static void print_file_info(const char *dir,
-                            const struct dirent *entry,
-                            const int left,
-                            const int right,
-                            const int index,
-                            bool is_preview)
+static void print_entry_info(const char *dir,
+                             const char *name,
+                             const char *symbol,
+                             const char *path,
+                             const int left,
+                             const int right,
+                             const int index,
+                             bool is_file,
+                             bool is_preview)
 {
-    char full_path[PATH_MAX] = { 0 };
-    const char *fn = entry->d_name;
-
-    strcpy(full_path,
-           dir);
-
-    path(full_path,
-         fn);
-
-    const size_t fn_len = strlen(fn);
+    const size_t fn_len = strlen(name);
 
     const int width = right - left;
     const int max_len = (is_preview) ? width - 2:
@@ -170,9 +164,9 @@ static void print_file_info(const char *dir,
                                                   max_len;
 
     printf("%s ",
-           ICON_FILE);
+           symbol);
 
-    fwrite(fn,
+    fwrite(name,
            sizeof(char),
            print_len,
            stdout);
@@ -187,9 +181,10 @@ static void print_file_info(const char *dir,
                ellipsis - 3);
     }
 
-    if (!is_preview)
+    if (is_file &&
+        !is_preview)
     {
-        const struct filesize sz = file_size(full_path);
+        const struct filesize sz = file_size(path);
 
         printf("\033[%d;%dH%s",
                index,
@@ -198,21 +193,6 @@ static void print_file_info(const char *dir,
     }
 }
 
-static void print_no_permissions(const int left,
-                                 const int index)
-{
-    printf("\033[%d;%dH%s",
-           index,
-           left,
-           ICON_DENY);
-}
-
-static void print_directory_info(const struct dirent *entry)
-{
-    printf("%s %s",
-           ICON_FOLDER,
-           entry->d_name);
-}
 
 static void print_file_contents(const struct preview *pre,
                                 const int left,
@@ -240,7 +220,7 @@ static void print_file_contents(const struct preview *pre,
 
         for (int i = 3; i < height; i++)
         {
-            if (remain > pre->file.count)
+            if (remain >= pre->file.count)
             {
                 break;
             }
@@ -308,6 +288,9 @@ void print_directory(const struct directory *dir,
         strcpy(full_path,
                dir->path);
 
+        path(full_path,
+             entry->d_name);
+
         printf("\033[%d;%dH",
                j,
                left);
@@ -317,27 +300,28 @@ void print_directory(const struct directory *dir,
             enable_bold();
         }
 
-        if (is_dir(entry))
-        {
-            print_directory_info(entry);
-        }
-        else
-        {
-            print_file_info(dir->path,
-                            entry,
-                            left,
-                            right,
-                            j,
-                            is_preview);
-        }
+        bool is_file = (!is_dir(entry)) ? true :
+                                          false;
 
-        if (!has_permissions(path(full_path,
-                                 entry->d_name),
+        const char *symbol = (is_file) ? ICON_FILE :
+                                         ICON_FOLDER;
+
+
+        if (!has_permissions(full_path,
                              R_OK))
         {
-            print_no_permissions(left,
-                                 j);
+            symbol = ICON_DENY;
         }
+
+        print_entry_info(dir->path,
+                         entry->d_name,
+                         symbol,
+                         full_path,
+                         left,
+                         right,
+                         j,
+                         is_file,
+                         is_preview);
 
         if (i == dir->cursor)
         {
@@ -363,7 +347,7 @@ void print_preview(const struct preview *pre,
     if (pre->type & PT_DIR)
     {
         print_directory(&pre->directory,
-                        left + 1,
+                        left,
                         right,
                         height,
                         true);
@@ -371,7 +355,7 @@ void print_preview(const struct preview *pre,
     else if (pre->type & PT_FIL)
     {
         print_file_contents(pre,
-                            left + 1,
+                            left,
                             right,
                             height);
     }
