@@ -22,11 +22,6 @@ void print_vertical_line(int x,
                          int height);
 
 
-void enable_bold(void);
-
-void reset_formatting(void);
-
-
 void print_directory(const struct directory *dir,
                      int left,
                      int right,

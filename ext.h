@@ -1,6 +1,5 @@
 #pragma once
 
-#include <stddef.h>
+#include <stdbool.h>
 
-const char *valid_filetype(register const char *str,
-                           register size_t len);
+bool is_file_valid(char *path);

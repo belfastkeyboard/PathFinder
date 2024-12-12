@@ -13,28 +13,23 @@ void get_input(char *key)
 {
     memset(key, 0, KEY_LEN);
 
-//    static int i = 0;
-//    const char *table[] =
-//    {
-//        [0] = KEY_LEFT,
-//        [1] = KEY_LEFT,
-//        [2] = KEY_LEFT,
-//        [3] = KEY_LEFT,
-//        [4] = KEY_LEFT,
-//        [5] = KEY_RIGHT
+//    const char *table[] = {
+//        KEY_LEFT,
+//        KEY_LEFT,
+//        KEY_DOWN,
+//        KEY_DOWN,
+//        KEY_DOWN,
+//        KEY_DOWN,
+//        KEY_DOWN,
+//        KEY_DOWN
 //    };
 //
-//    if (i < 3)
-//    {
-//        const char *go = table[i++];
-//        strcpy(key,
-//               go);
-//    }
-//    else
-//    {
-//        strcpy(key,
-//               "s");
-//    }
+//    static size_t i = 0;
+//
+//    const char *select = table[i++];
+//
+//    strcpy(key,
+//           select);
 
     read(STDIN_FILENO,
          key,

@@ -4,9 +4,7 @@
 
 
 // TODO:
-//  it's not printing preveiw files for some reason!
-//  cannot display file message is bugged
-//  long preview titles can overflow the display
+//  fix valgrind errors
 //  scrolling file previews
 //  display error message in red text on the bottom line
 
@@ -31,13 +29,11 @@ int main(int argc, char *argv[])
     {
         const int w = screen_width();
         const int h = screen_height();
-
         const int pre_div = (int)(w * 0.65);
-
-        new_screen();
-
         const int dir_r = (settings & SETTINGS_PREV) ? pre_div :
                                                        w;
+
+        new_screen();
 
         print_directory(&directory,
                         0,

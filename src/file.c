@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include "../ext.h"
 #include "../file.h"
 #include "../path.h"
 #include "../settings.h"
@@ -252,44 +253,72 @@ void load_preview(struct directory *dir,
 
     pre->path = preview_path;
 
-    if (has_permissions(pre->path,
-                        R_OK))
+    bool is_directory = is_dir(entry);
+    bool is_permitted = has_permissions(pre->path,
+                                        R_OK);
+
+    if (is_permitted &&
+        is_directory)
     {
-        if (is_dir(entry))
+        pre->directory.path = pre->path;
+
+        load_directory(&pre->directory,
+                       settings);
+
+        pre->type = PT_DIR;
+    }
+    else
+    {
+        bool valid = is_file_valid(pre->path);
+        struct filesize fs = file_size(pre->path);
+        const size_t count = fs.bytes;
+
+        if (is_permitted &&
+            valid &&
+            count)
         {
-            pre->directory.path = pre->path;
+            pre->type = PT_FIL;
 
-            load_directory(&pre->directory,
-                           settings);
-
-            pre->type = PT_DIR;
-        }
-        else
-        {
-            struct filesize fs = file_size(pre->path);
-
-            pre->file.count = (int)fs.bytes;
-            pre->file.bytes = malloc(fs.bytes);
+            pre->file.count = count;
+            pre->file.bytes = malloc(count);
 
             FILE *file = fopen(pre->path,
                                "r");
 
             fread(pre->file.bytes,
                   sizeof(char),
-                  fs.bytes,
+                  count,
                   file);
-
-            pre->type = PT_FIL;
 
             fclose(file);
         }
-    }
-    else
-    {
-        pre->type = PT_DEN;
+        else
+        {
+            const char *message;
 
-        strcpy(pre->denied.msg,
-               "You do not have permission to preview this content.");
+            if (!is_permitted)
+            {
+                pre->type = PT_DEN;
+                message = "You do not have permission to preview this content.";
+            }
+            else if (!count)
+            {
+                pre->type = PT_EMP;
+                message = "This file is empty.";
+            }
+            else
+            {
+                pre->type = PT_INV;
+                message = "This filetype cannot be previewed.";
+            }
+
+            pre->file.count = strlen(message);
+            pre->file.bytes = malloc(pre->file.count + 1);
+
+            strncpy(pre->file.bytes,
+                   message,
+                   pre->file.count + 1);
+        }
     }
 }
 

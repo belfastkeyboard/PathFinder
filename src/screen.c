@@ -7,11 +7,14 @@
 #include "../screen.h"
 #include "../ext.h"
 
-#define SIZE_LEN    8
+#define SIZE_LEN        8
 
-#define ICON_FOLDER "📁"
-#define ICON_FILE   "📄"
-#define ICON_DENY   "🔒"
+#define ICON_FOLDER     "📁"
+#define ICON_FILE       "📄"
+#define ICON_DENY       "🔒"
+
+#define COLOUR_INFO     51,  215, 204
+#define COLOUR_ERROR    215, 29,  45
 
 
 void new_screen(void)
@@ -89,6 +92,28 @@ void disable_raw_mode(void)
 }
 
 
+static void enable_bold(void)
+{
+    printf("\033[1m");
+}
+
+static void reset_formatting(void)
+{
+    printf("\033[0m");
+}
+
+
+static void set_text_colour(unsigned char r,
+                            unsigned char g,
+                            unsigned char b)
+{
+    printf("\033[38;2;%d;%d;%dm",
+           r,
+           g,
+           b);
+}
+
+
 void print_vertical_line(const int x,
                          const int height)
 {
@@ -103,15 +128,6 @@ void print_vertical_line(const int x,
 }
 
 
-void enable_bold(void)
-{
-    printf("\033[1m");
-}
-
-void reset_formatting(void)
-{
-    printf("\033[0m");
-}
 
 
 static void print_centred(const char *text,
@@ -120,11 +136,25 @@ static void print_centred(const char *text,
 {
     const size_t len = strlen(text);
     const int width = right - left;
-    const int pad = (int)(width - len) / 2;
 
-    printf("\033[%dG%s",
-           left + pad,
-           text);
+    const size_t to_write = (len < width) ? len :
+                                            width;
+
+    size_t pad = (width - to_write) / 2;
+
+    printf("\033[%zuG",
+           left + pad);
+
+    pad = fwrite(text,
+                 sizeof(char),
+                 to_write,
+                 stdout);
+
+    if (len > width)
+    {
+        printf("\033[%zuG...",
+               left + pad - 3);
+    }
 }
 
 
@@ -144,8 +174,7 @@ static void print_title(const char *text,
 }
 
 
-static void print_entry_info(const char *dir,
-                             const char *name,
+static void print_entry_info(const char *name,
                              const char *symbol,
                              const char *path,
                              const int left,
@@ -199,63 +228,38 @@ static void print_file_contents(const struct preview *pre,
                                 const int right,
                                 const int height)
 {
-    char *ext = strrchr(pre->path,
-                        '.');
+    const int width = right - left;
+    void *bytes = pre->file.bytes;
+    int remain = (int)(pre->file.count);
 
-    if (!ext)
+    for (int i = 3; i < height && remain; i++)
     {
-        ext = pre->path;
-    }
-    else
-    {
-        ext++;
-    }
+        printf("\033[%d;%dH",
+               i,
+               left);
 
-    if (valid_filetype(ext,
-                       strlen(ext)))
-    {
-        const int width = right - left;
-        void *bytes = pre->file.bytes;
-        size_t remain = pre->file.count;
+        const size_t seek = (width < remain) ? width :
+                                               remain;
 
-        for (int i = 3; i < height; i++)
+        void *new_line = memchr(bytes,
+                                '\n',
+                                seek);
+
+        size_t write = seek;
+
+        if (new_line &&
+            new_line - bytes < seek)
         {
-            if (remain >= pre->file.count)
-            {
-                break;
-            }
-
-            printf("\033[%d;%dH",
-                   i,
-                   left);
-
-            const size_t seek = (width < remain) ? width :
-                                                   remain;
-
-            void *new_line = memchr(bytes,
-                                    '\n',
-                                    seek);
-
-            size_t write = width;
-
-            if (new_line &&
-                new_line - bytes < width)
-            {
-                write = new_line - bytes + 1;
-            }
-
-            write = fwrite(bytes,
-                           sizeof(char),
-                           write,
-                           stdout);
-
-            remain -= write;
-            bytes += write;
+            write = new_line - bytes + 1;
         }
-    }
-    else
-    {
-        printf("Cannot display that file");
+
+        write = fwrite(bytes,
+                       sizeof(char),
+                       write,
+                       stdout);
+
+        remain -= (int)write;
+        bytes += write;
     }
 
     fflush(stdout);
@@ -313,8 +317,7 @@ void print_directory(const struct directory *dir,
             symbol = ICON_DENY;
         }
 
-        print_entry_info(dir->path,
-                         entry->d_name,
+        print_entry_info(entry->d_name,
                          symbol,
                          full_path,
                          left,
@@ -337,10 +340,8 @@ void print_preview(const struct preview *pre,
                    int right,
                    int height)
 {
-    char *title = strrchr(pre->path,
-                          '/') + 1;
-
-    print_title(title,
+    print_title(strrchr(pre->path,
+                        '/') + 1,
                 left,
                 right);
 
@@ -352,11 +353,18 @@ void print_preview(const struct preview *pre,
                         height,
                         true);
     }
-    else if (pre->type & PT_FIL)
+    else
     {
+        if (pre->type & (PT_INV | PT_EMP | PT_DEN))
+        {
+            set_text_colour(COLOUR_INFO);
+        }
+
         print_file_contents(pre,
                             left,
                             right,
                             height);
+
+        reset_formatting();
     }
 }

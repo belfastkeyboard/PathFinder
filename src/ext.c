@@ -31,6 +31,7 @@ error "gperf generated tables don't work with this execution character set. Plea
 #line 1 "whitelist.gperf"
 
 #include <string.h>
+#include "../ext.h"
 
 #define TOTAL_KEYWORDS 55
 #define MIN_WORD_LENGTH 1
@@ -131,8 +132,8 @@ static unsigned int hash (register const char *str,
     return hval;
 }
 
-const char *valid_filetype(register const char *str,
-                           register size_t len)
+static const char *valid_filetype(register const char *str,
+                                  register size_t len)
 {
     static const char *wordlist[] =
     {
@@ -248,4 +249,24 @@ const char *valid_filetype(register const char *str,
     }
 
     return NULL;
+}
+
+bool is_file_valid(char *path)
+{
+    char *ext = strrchr(path,
+                        '.');
+
+    if (!ext)
+    {
+        ext = path;
+    }
+    else
+    {
+        ext++;
+    }
+
+    const size_t size = strlen(ext);
+
+    return valid_filetype(ext,
+                          size);
 }

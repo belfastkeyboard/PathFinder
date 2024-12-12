@@ -9,6 +9,8 @@
 #define PT_DIR  (1 << 0)
 #define PT_FIL  (1 << 1)
 #define PT_DEN  (1 << 2)
+#define PT_EMP  (1 << 3)
+#define PT_INV  (1 << 4)
 
 
 struct filesize
@@ -31,12 +33,7 @@ struct directory
 struct file
 {
     char *bytes;
-    int count;
-};
-
-struct denied
-{
-    char msg[64];
+    size_t count;
 };
 
 
@@ -47,7 +44,6 @@ struct preview
     union {
         struct directory directory;
         struct file file;
-        struct denied denied;
     };
 };
 
