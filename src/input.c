@@ -16,19 +16,19 @@ void get_input(char *key)
 {
     memset(key, 0, KEY_LEN);
 
-    static size_t i = 0;
-
-//    if (i < 4)
+//    static size_t i = 0;
+//
+//    if (i < 1)
 //        strcpy(key,
-//               KEY_DOWN);
-//    else if (i < 8)
+//               KEY_UP);
+//    else
 //        strcpy(key,
-//               KEY_PG_DN);
+//               "o");
 //    else
 //        strcpy(key,
 //               KEY_PG_UP);
-
-    i++;
+//
+//    i++;
 
     read(STDIN_FILENO,
          key,

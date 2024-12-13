@@ -110,3 +110,6 @@ void step_out(struct directory *dir,
               int left,
               int right,
               int height);
+
+int open_file(const key key,
+              const struct directory *dir);

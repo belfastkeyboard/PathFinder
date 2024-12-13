@@ -5,19 +5,24 @@
 
 // TODO:
 //  display error message in red text on the bottom line
+//  scroll dir previews
+//  open files with 'o' in associated application
+//  open thunar by pressing 'd'
+//  copy-paste files
 //  only read enough bytes to display on the preview
 //  scrolling file previews are a bit banjaxed
+//  drag-n-drop preview separator
+//  delete files with remove(), directories with rmdir()
 
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     enable_raw_mode();
 
-    char current_path[PATH_MAX] = { 0 };
-    struct directory directory = { 0 };
-    struct preview preview = { 0 };
-    struct screen screen = { 0 };
-    key key = { 0 };
+    char current_path[PATH_MAX] = {0};
+    struct directory directory = {0};
+    struct preview preview = {0};
+    struct screen screen = {0};
+    key key = {0};
     settings settings = SETTINGS_PREV;
 
     refresh_screen(&screen,
@@ -32,7 +37,9 @@ int main(int argc, char *argv[])
               screen.width,
               screen.height);
 
-    while (true)
+    bool exit = false;
+
+    while (!exit)
     {
         new_screen();
 
@@ -55,12 +62,8 @@ int main(int argc, char *argv[])
 
         get_input(key);
 
-        if (should_exit(key))
-        {
-            break;
-        }
-        else if (change_settings(&settings,
-                                 key))
+        if (change_settings(&settings,
+                            key))
         {
             load_directory(&directory,
                            settings);
@@ -96,14 +99,17 @@ int main(int argc, char *argv[])
                     screen.width,
                     screen.height);
 
+
         refresh_screen(&screen,
                        settings);
+
+        exit |= (open_file(key,
+                           &directory) |
+                 should_exit(key));
     }
 
     unload_directory(&directory);
     unload_preview(&preview);
     disable_raw_mode();
     close_screen();
-
-    return 0;
 }

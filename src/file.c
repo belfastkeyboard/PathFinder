@@ -404,3 +404,44 @@ void step_out(struct directory *dir,
         dir->path[len] = '/';
     }
 }
+
+int open_file(const key key,
+              const struct directory *dir)
+{
+    int result = 0;
+
+    if (strcmp(key,
+               "o") == 0)
+    {
+        char command[PATH_MAX];
+        char file_path[PATH_MAX];
+
+        const struct dirent *entry = dir->list[dir->cursor];
+
+        strncpy(file_path,
+                dir->path,
+                strlen(dir->path));
+
+        path(file_path,
+             entry->d_name);
+
+        snprintf(command,
+                 sizeof(command),
+                 "xdg-open \"%s\" &",
+                 file_path);
+
+        result = system(command);
+
+        if (result == -1)
+        {
+            perror("system");
+            exit(1);
+        }
+        else
+        {
+            result = 1;
+        }
+    }
+
+    return result;
+}
