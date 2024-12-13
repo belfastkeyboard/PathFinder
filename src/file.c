@@ -1,4 +1,3 @@
-#include <ctype.h>
 #include <malloc.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -8,6 +7,7 @@
 #include "../file.h"
 #include "../path.h"
 #include "../settings.h"
+#include "../sort.h"
 
 
 #define  B (1)
@@ -15,59 +15,15 @@
 #define MB (KB * 1024)
 #define GB (MB * 1024)
 
-typedef int (*SortFunc)(const struct dirent **, const struct dirent **);
-
-
-static int sort_alphabetical(const struct dirent **entry1,
-                             const struct dirent **entry2)
-{
-    const char *a = (*entry1)->d_name;
-    const char *b = (*entry2)->d_name;
-
-    while (*a == *b)
-    {
-        a++;
-        b++;
-    }
-
-    const int x = tolower(*a);
-    const int y = tolower(*b);
-
-    return ((x > y) - (x < y));
-}
-
-static int sort_type(const struct dirent **entry1,
-                     const struct dirent **entry2)
-{
-    const unsigned char x = (*entry1)->d_type;
-    const unsigned char y = (*entry2)->d_type;
-
-    return ((x > y) - (x < y));
-}
-
 
 static SortFunc sort_table[] =
 {
-    sort_alphabetical,
-    sort_type
+        sort_alphabetical,
+        sort_type
 };
 
 int sort_index = 0;
 const int sort_table_max = sizeof(sort_table) / sizeof(SortFunc);
-
-
-int no_special(const struct dirent *entry)
-{
-    int result = strcmp(entry->d_name, ".") == 0 ||
-                 strcmp(entry->d_name, "..") == 0;
-
-    return !result;
-}
-
-int hide_hidden(const struct dirent *entry)
-{
-    return entry->d_name[0] != '.';
-}
 
 
 static struct filesize get_size_as_string(const long sz)
@@ -114,6 +70,35 @@ static struct filesize get_size_as_string(const long sz)
     return size;
 }
 
+static void get_parent(char *path)
+{
+    char *sep = strrchr(path,
+                        '/');
+
+    if (sep != path)
+    {
+        sep[0] = '\0';
+    }
+    else
+    {
+        sep[1] = '\0';
+    }
+}
+
+
+int no_special(const struct dirent *entry)
+{
+    int result = strcmp(entry->d_name, ".") == 0 ||
+                 strcmp(entry->d_name, "..") == 0;
+
+    return !result;
+}
+
+int hide_hidden(const struct dirent *entry)
+{
+    return entry->d_name[0] != '.';
+}
+
 
 void load_directory(struct directory* dir,
                     const settings settings)
@@ -149,21 +134,6 @@ void load_directory(struct directory* dir,
         perror("scandir");
 
         exit(1);
-    }
-}
-
-static void get_parent(char *path)
-{
-    char *sep = strrchr(path,
-                        '/');
-
-    if (sep != path)
-    {
-        sep[0] = '\0';
-    }
-    else
-    {
-        sep[1] = '\0';
     }
 }
 
@@ -208,7 +178,10 @@ void init_path(char *current_dir,
                const char *path,
                struct directory *dir,
                struct preview *pre,
-               const settings settings)
+               const settings settings,
+               const int left,
+               const int right,
+               const int height)
 {
     realpath(path,
              current_dir);
@@ -219,12 +192,18 @@ void init_path(char *current_dir,
 
     step_out(dir,
              pre,
-             settings);
+             settings,
+             left,
+             right,
+             height);
 }
 
 void load_preview(struct directory *dir,
                   struct preview *pre,
-                  const settings settings)
+                  const settings settings,
+                  const int left,
+                  const int right,
+                  const int height)
 {
     static char preview_path[PATH_MAX] = { 0 };
     struct dirent *entry = dir->list[dir->cursor];
@@ -259,24 +238,19 @@ void load_preview(struct directory *dir,
         struct filesize fs = file_size(pre->path);
         const size_t count = fs.bytes;
 
+        pre->file.offset = 0;
+
         if (is_permitted &&
             valid &&
             count)
         {
             pre->type = PT_FIL;
 
-            pre->file.count = count;
-            pre->file.bytes = malloc(count);
-
-            FILE *file = fopen(pre->path,
-                               "r");
-
-            fread(pre->file.bytes,
-                  sizeof(char),
-                  count,
-                  file);
-
-            fclose(file);
+            load_file(pre,
+                      count,
+                      left,
+                      right,
+                      height);
         }
         else
         {
@@ -298,14 +272,44 @@ void load_preview(struct directory *dir,
                 message = "ⓘ This filetype cannot be previewed.";
             }
 
-            pre->file.count = strlen(message);
-            pre->file.bytes = malloc(pre->file.count + 1);
+            pre->file.size = strlen(message);
+            pre->file.bytes = malloc(pre->file.size + 1);
 
             strncpy(pre->file.bytes,
-                   message,
-                   pre->file.count + 1);
+                    message,
+                    pre->file.size + 1);
+
+            pre->file.read = pre->file.size;
         }
     }
+}
+
+void load_file(struct preview *pre,
+               const size_t count,
+               const int left,
+               const int right,
+               const int height)
+{
+    const int space = (right - left) * height;
+    const size_t to_read = (count < space) ? count :
+                                             space;
+
+    pre->file.size = count;
+    pre->file.bytes = malloc(to_read);
+
+    FILE *file = fopen(pre->path,
+                       "r");
+
+    fseek(file,
+          pre->file.offset,
+          SEEK_SET);
+
+    pre->file.read = fread(pre->file.bytes,
+                           sizeof(char),
+                           to_read,
+                           file);
+
+    fclose(file);
 }
 
 void unload_directory(struct directory *dir)
@@ -342,7 +346,10 @@ void unload_preview(struct preview *pre)
 void step_in(const char *new_name,
              struct directory *dir,
              struct preview *pre,
-             const settings settings)
+             const settings settings,
+             const int left,
+             const int right,
+             const int height)
 {
     dir->path = path(dir->path,
                      new_name);
@@ -355,7 +362,10 @@ void step_in(const char *new_name,
 
         load_preview(dir,
                      pre,
-                     settings);
+                     settings,
+                     left,
+                     right,
+                     height);
     }
     else
     {
@@ -367,7 +377,10 @@ void step_in(const char *new_name,
 
 void step_out(struct directory *dir,
               struct preview *pre,
-              const settings settings)
+              const settings settings,
+              const int left,
+              const int right,
+              const int height)
 {
     get_parent(dir->path);
 
@@ -379,7 +392,10 @@ void step_out(struct directory *dir,
 
         load_preview(dir,
                      pre,
-                     settings);
+                     settings,
+                     left,
+                     right,
+                     height);
     }
     else
     {

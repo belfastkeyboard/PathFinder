@@ -34,7 +34,9 @@ struct directory
 struct file
 {
     char *bytes;
-    size_t count;
+    size_t read;
+    size_t size;
+    long offset;
 };
 
 
@@ -67,7 +69,10 @@ void init_path(char *current_dir,
                const char *path,
                struct directory *dir,
                struct preview *pre,
-               settings settings);
+               settings settings,
+               int left,
+               int right,
+               int height);
 
 
 void load_directory(struct directory* dir,
@@ -75,7 +80,16 @@ void load_directory(struct directory* dir,
 
 void load_preview(struct directory *dir,
                   struct preview *pre,
-                  settings settings);
+                  settings settings,
+                  int left,
+                  int right,
+                  int height);
+
+void load_file(struct preview *pre,
+               size_t count,
+               int left,
+               int right,
+               int height);
 
 void unload_directory(struct directory *dir);
 
@@ -85,8 +99,14 @@ void unload_preview(struct preview *pre);
 void step_in(const char *new_name,
              struct directory *dir,
              struct preview *pre,
-             settings settings);
+             settings settings,
+             int left,
+             int right,
+             int height);
 
 void step_out(struct directory *dir,
               struct preview *pre,
-              settings settings);
+              settings settings,
+              int left,
+              int right,
+              int height);

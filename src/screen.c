@@ -7,14 +7,16 @@
 #include "../screen.h"
 #include "../ext.h"
 
-#define SIZE_LEN        8
+#define SIZE_LEN            8
 
-#define ICON_FOLDER     "📁"
-#define ICON_FILE       "📄"
-#define ICON_DENY       "🔒"
+#define ICON_FOLDER         "📁"
+#define ICON_FILE           "📄"
+#define ICON_DENY           "🔒"
 
-#define COLOUR_INFO     51,  215, 204
-#define COLOUR_ERROR    215, 29,  45
+#define COLOUR_INFO         51,  215, 204
+#define COLOUR_ERROR        215, 29,  45
+
+#define COLOUR_BG_HIGHLIGHT 0,   98,  122
 
 
 void new_screen(void)
@@ -27,6 +29,16 @@ void new_screen(void)
 void close_screen(void)
 {
     printf("\033[?1049l");
+}
+
+void refresh_screen(struct screen *screen,
+                    const settings settings)
+{
+    screen->width = screen_width();
+    screen->height = screen_height();
+    screen->preview_divider = (int)(screen->width * 0.65);
+    screen->directory_right = (settings & SETTINGS_PREV) ? screen->preview_divider :
+                                                           screen->width;
 }
 
 
@@ -113,6 +125,16 @@ static void set_text_colour(unsigned char r,
            b);
 }
 
+static void set_bg_colour(unsigned char r,
+                          unsigned char g,
+                          unsigned char b)
+{
+    printf("\033[48;2;%d;%d;%dm",
+           r,
+           g,
+           b);
+}
+
 
 void print_vertical_line(const int x,
                          const int height)
@@ -181,14 +203,32 @@ static void print_entry_info(const char *name,
                              bool is_file,
                              bool is_preview)
 {
+    const int width = right - left;
     const size_t fn_len = strlen(name);
 
-    const int width = right - left;
     const int max_len = (is_preview) ? width - 2:
                                        width - SIZE_LEN - 4;
 
     const size_t print_len = (fn_len < max_len) ? fn_len :
                                                   max_len;
+
+    if (!is_preview)
+    {
+        char buff[width];
+
+        memset(buff,
+               ' ',
+               width);
+
+        fwrite(buff,
+               sizeof(char),
+               width,
+               stdout);
+
+        printf("\033[%d;%dH",
+               index,
+               left);
+    }
 
     printf("%s ",
            symbol);
@@ -228,7 +268,7 @@ static void print_file_contents(const struct preview *pre,
 {
     const int width = right - left;
     void *bytes = pre->file.bytes;
-    int remain = (int)(pre->file.count);
+    int remain = (int)(pre->file.read);
 
     for (int i = 3; i < height && remain; i++)
     {
@@ -297,9 +337,11 @@ void print_directory(const struct directory *dir,
                j,
                left);
 
-        if (i == dir->cursor)
+        if (i == dir->cursor &&
+            !is_preview)
         {
             enable_bold();
+            set_bg_colour(COLOUR_BG_HIGHLIGHT);
         }
 
         bool is_file = (!is_dir(entry)) ? true :

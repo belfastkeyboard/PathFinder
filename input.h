@@ -19,9 +19,21 @@ void move_cursor(const key key,
                  struct directory *dir,
                  struct preview *pre,
                  settings settings,
+                 int left,
+                 int right,
                  int height);
 
 void move_dir(const key key,
               struct directory *dir,
               struct preview *pre,
-              settings settings);
+              settings settings,
+              int left,
+              int right,
+              int height);
+
+void scroll_file(const key key,
+                 struct preview *pre,
+                 settings settings,
+                 int left,
+                 int right,
+                 int height);
