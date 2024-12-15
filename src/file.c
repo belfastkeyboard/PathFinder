@@ -161,6 +161,11 @@ bool is_dir(const struct dirent *entry)
     return entry->d_type & DT_DIR;
 }
 
+bool is_file(const struct dirent *entry)
+{
+    return entry->d_type & DT_REG;
+}
+
 bool is_root(const char *path)
 {
     return strcmp(path, "/") == 0;
@@ -425,21 +430,41 @@ int open_file(const key key,
         path(file_path,
              entry->d_name);
 
-        snprintf(command,
-                 sizeof(command),
-                 "xdg-open \"%s\" &",
-                 file_path);
-
-        result = system(command);
-
-        if (result == -1)
+        if (is_file(entry))
         {
-            perror("system");
-            exit(1);
-        }
-        else
-        {
-            result = 1;
+            struct stat f_stat;
+
+            if (stat(file_path,
+                     &f_stat) == -1)
+            {
+                perror("stat");
+                exit(1);
+            };
+
+            if (f_stat.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH))
+            {
+                strcpy(command,
+                       file_path);
+            }
+            else
+            {
+                snprintf(command,
+                         sizeof(command),
+                         "xdg-open \"%s\" &",
+                         file_path);
+            }
+
+            result = system(command);
+
+            if (result == -1)
+            {
+                perror("system");
+                exit(1);
+            }
+            else
+            {
+                result = 1;
+            }
         }
     }
 

@@ -6,7 +6,7 @@
 // TODO:
 //  display error message in red text on the bottom line
 //  scroll dir previews
-//  open files with 'o' in associated application
+//  open executables
 //  open thunar by pressing 'd'
 //  copy-paste files
 //  only read enough bytes to display on the preview

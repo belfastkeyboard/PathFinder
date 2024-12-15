@@ -18,15 +18,15 @@ void get_input(char *key)
 
 //    static size_t i = 0;
 //
-//    if (i < 1)
+//    if (i < 2)
 //        strcpy(key,
-//               KEY_UP);
+//               KEY_LEFT);
+//    else if (i < 9)
+//        strcpy(key,
+//               KEY_DOWN);
 //    else
 //        strcpy(key,
 //               "o");
-//    else
-//        strcpy(key,
-//               KEY_PG_UP);
 //
 //    i++;
 

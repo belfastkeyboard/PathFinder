@@ -59,6 +59,8 @@ struct filesize file_size(const char *path);
 
 bool is_dir(const struct dirent *entry);
 
+bool is_file(const struct dirent *entry);
+
 bool is_root(const char *path);
 
 bool has_permissions(const char *path,
